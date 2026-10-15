@@ -34,7 +34,7 @@ class OrderService:
             raise NotFoundError(f"Order with ID {order_id} not found")
         return order
 
-    def update_order_status(
+    async def update_order_status(
         self,
         order_id: str,
         status_update: OrderStatusUpdate,
@@ -42,8 +42,19 @@ class OrderService:
     ) -> Dict[str, Any]:
         current_order = self.get_order(order_id)
         from_status = current_order.get("status")
+        woo_order_id = current_order.get("woo_order_id")
 
-        # In Phase 4, this calls WooCommerceClient to push status before updating local DB
+        # Push to WooCommerce if updated from CRM and WooCommerce is configured
+        if source == "crm" and woo_order_id:
+            from app.services.woocommerce_client import WooCommerceClient
+            woo = WooCommerceClient()
+            if woo.base_url and woo.consumer_key:
+                try:
+                    await woo.update_order_status(woo_order_id, status_update.status)
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).warning(f"Could not push status to WooCommerce: {e}")
+
         updated = self.order_repo.update_status(
             order_id=order_id,
             to_status=status_update.status,

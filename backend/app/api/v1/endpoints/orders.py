@@ -65,7 +65,7 @@ async def update_order_status(
     current_user: CurrentUser = Depends(get_current_user),
     service: OrderService = Depends(get_order_service),
 ) -> OrderResponse:
-    updated = service.update_order_status(
+    updated = await service.update_order_status(
         order_id=id,
         status_update=status_update,
         source="crm",
